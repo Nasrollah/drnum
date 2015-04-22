@@ -500,6 +500,7 @@ void GPU_CartesianLevelSetBC<DIM,NUM_LS,LS,BC>::operator()()
 
     CUDA_CHECK_ERROR;
 
+    /*
     if (m_BcCells[i_patch].size() > 0) {
       int num_cells   = m_BcCells[i_patch].size();
       int num_blocks  = max(int(16), int(num_cells/max_num_threads) + 1);
@@ -511,6 +512,7 @@ void GPU_CartesianLevelSetBC<DIM,NUM_LS,LS,BC>::operator()()
       cudaDeviceSynchronize();
       cudaMemcpy(this->m_GpuPatches[i_patch].getField(0), this->m_GpuPatches[i_patch].getField(2), this->m_GpuPatches[i_patch].fieldSize()*sizeof(real) ,cudaMemcpyDeviceToDevice);
     }
+    */
 
     if (m_Cells[i_patch].size() > 0) {
       int num_cells   = m_Cells[i_patch].size();
