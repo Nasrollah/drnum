@@ -268,9 +268,9 @@ __global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t* cells, int ds
   n[1] = cell_i.gy;
   n[2] = cell_i.gz;
   real norm_g = norm(n[0], n[1], n[2]);
-  n[0] = n[0]/norm_g;
-  n[1] = n[1]/norm_g;
-  n[2] = n[2]/norm_g;
+  n[0] /= norm_g;
+  n[1] /= norm_g;
+  n[2] /= norm_g;
 
   real dot_n = dot(u, v, w, n[0], n[1], n[2]);
   u -= 2*n[0]*dot_n;
@@ -285,7 +285,7 @@ __global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t* cells, int ds
 }
 
 template <unsigned int DIM, unsigned int SIZE, typename LS>
-__global__ void GPU_CartesianLevelSetComputeInsideCellsBC_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<DIM,SIZE,LS>::lsextp_cell_t* cells, size_t num_cells)
+__global__ void GPU_CartesianLevelSetComputeInsideCells_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<DIM,SIZE,LS>::lsextp_cell_t* cells, size_t num_cells)
 {
   int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
@@ -301,14 +301,15 @@ __global__ void GPU_CartesianLevelSetComputeInsideCellsBC_kernel(GPU_CartesianPa
     var[i_var] = 0.0;
   }
   // Compute
-  // Warning!  The weight should be normalize by the total weight
+  // Warning!  The weight should have been normalize by the total weight beforehand
   for (size_t n_src = 0; n_src < SIZE; ++n_src) {
     patch.getVar(dim, 0, cell_i.src_index[n_src], src_var);
     for (size_t i_var = 0; i_var < DIM; ++i_var) {
       var[i_var] += cell_i.src_weight[n_src]*src_var[i_var];
     }
   }
-  // Store and instantiate
+  // 1. Store
+  // 2. Instantiate dst_data
   for (size_t i_var = 0; i_var < DIM; ++i_var) {
     cell_i.tmp_data[i_var] = var[i_var];
     cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] = 0;
@@ -350,7 +351,7 @@ __global__ void GPU_CartesianLevelSetWriteBCCells_kernel(lsbc_cell_t<DIM,SIZE>* 
 }
 
 template <unsigned int DIM, unsigned int SIZE, typename LS>
-void GPU_CartesianLevelSetBC<DIM,LS>::operator()()
+void GPU_CartesianLevelSetBC<DIM,SIZE,LS>::operator()()
 {
   cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
   CUDA_CHECK_ERROR;
@@ -389,7 +390,7 @@ void GPU_CartesianLevelSetBC<DIM,LS>::operator()()
       int num_threads = num_cells/num_blocks + 1;
       if (num_cells > num_blocks*num_threads) BUG;
 
-      GPU_CartesianLevelSetComputeInsideCellsBC_kernel<DIM,SIZE,LS> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
+      GPU_CartesianLevelSetComputeInsideCells_kernel<DIM,SIZE,LS> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR;
 
