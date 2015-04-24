@@ -53,7 +53,8 @@ protected: // attributes
   QVector<QList<lsextp_cell_t> > m_InsideCells;
   QVector<lsextp_cell_t*>        m_GpuInsideCells;
 
-  lsbc_list_t m_BcCells;
+  lsbc_list_t  m_BcCells;
+  lsbc_cell_t* m_GpuBcCells;
 
   bool m_UpdateRequired;
   LS   m_Ls;
@@ -99,7 +100,6 @@ GPU_CartesianLevelSetBC<DIM,SIZE,LS>::GPU_CartesianLevelSetBC(PatchGrid* patch_g
   : GPU_LevelSetBC<DIM, CartesianPatch, GPU_CartesianPatch>(patch_grid, cuda_device, thread_limit)
 {
   m_Ls = ls;
-  memcpy(&m_BcCells, &bc_cell_list, sizeof(bc_cell_list));
   m_UpdateRequired = true;
   for (int i_patch = 0; i_patch < this->m_Patches.size(); ++i_patch) {
     CartesianPatch& patch = *(this->m_Patches[i_patch]);
@@ -113,23 +113,33 @@ GPU_CartesianLevelSetBC<DIM,SIZE,LS>::GPU_CartesianLevelSetBC(PatchGrid* patch_g
       }
     }
   }
-  QMap<real*,real*> cpu2gpu;
 
+
+  memcpy(&m_BcCells, &bc_cell_list, sizeof(bc_cell_list));
+  // Create map of cpu pointers to gpu pointers
+  QMap<real*,real*> cpu2gpu;
   for (size_t i_patch = 0; i_patch < this->m_Patches.size(); ++i_patch) {
     if (!this->m_Patches[i_patch]->gpuDataSet()) BUG;
     cpu2gpu.insert( m_Patches[i_patch]->getData(), m_Patches[i_patch]->getGpuData() );
   }
+  // Map cpu pointers to gpu pointers
+  for (int c_i = 0; c_i < m_BcCells.dst_cells_size; ++c_i) {
+    lsbc_cell_t& cell_i = m_BcCells.lsbc_cell_t[c_i];
+    for (int c_n = 0; c_n < SIZE; ++c_n) {
+      cell_i.src_data[c_n] = cpu2gpu.value(cell_i.src_data[c_n]);
+    }
+    cell_i.dst_data = cpu2gpu.value(cell_i.dst_data[c_n]);
+  }
 
-  // ...
+  // Create new gpu pointer storage variable
+  m_GpuBcCells = new lsbc_cell_t[m_BcCells.dst_cells_size];
 
-  //real *pointer = ???;
-  //
-  //if (!cpu2gpu.keys().contains(pointer)) BUG;
-  //real* gpu_pointer = cpu2gpu[pointer];
+  // allocate new arrays
+  cudaMalloc(&m_GpuBcCells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t));
+  CUDA_CHECK_ERROR;
 
-
-
-
+  cudaMemcpy(m_GpuBcCells, m_BcCells.dst_cells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t), cudaMemcpyHostToDevice);
+  CUDA_CHECK_ERROR;
 }
 
 template <unsigned int DIM, unsigned int SIZE, typename LS>
