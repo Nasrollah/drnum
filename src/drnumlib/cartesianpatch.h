@@ -317,20 +317,20 @@ public: // methods
     return i*m_NumJ*m_NumK + j*m_NumK + k;
   }
 
-//  size_t save_index(int i, int j, int k,
-//                    bool& error) {
-//    size_t si = i;  // avoid vast compiler warnings
-//    size_t sj = j;
-//    size_t sk = k;
-//    error = false;
-//    if(i < 0) error = true;
-//    if(j < 0) error = true;
-//    if(k < 0) error = true;
-//    if(si > m_NumI-1) error = true;
-//    if(sj > m_NumJ-1) error = true;
-//    if(sk > m_NumK-1) error = true;
-//    return si*m_NumJ*m_NumK + sj*m_NumK + sk;
-//  }
+  //  size_t save_index(int i, int j, int k,
+  //                    bool& error) {
+  //    size_t si = i;  // avoid vast compiler warnings
+  //    size_t sj = j;
+  //    size_t sk = k;
+  //    error = false;
+  //    if(i < 0) error = true;
+  //    if(j < 0) error = true;
+  //    if(k < 0) error = true;
+  //    if(si > m_NumI-1) error = true;
+  //    if(sj > m_NumJ-1) error = true;
+  //    if(sk > m_NumK-1) error = true;
+  //    return si*m_NumJ*m_NumK + sj*m_NumK + sk;
+  //  }
 
   /**
    * Set up interpolation methods for giving data to foreign patches.
@@ -373,7 +373,7 @@ public: // methods
    * @return true, if interpol sets were found.
    */
   virtual bool computeCCGrad1NInterpolCoeffs(real x, real y, real z,
-					     real nx, real ny, real nz,
+                                             real nx, real ny, real nz,
                                              WeightedSet<real>& w_set);
 
   /**
@@ -437,7 +437,7 @@ public: // methods
    * @return boolean, indicating point (x,y,z) is inside core region
    */
   bool xyzToRefInterCell(real x, real y, real z,
-			 size_t& i_ref, size_t& j_ref, size_t& k_ref);
+                         size_t& i_ref, size_t& j_ref, size_t& k_ref);
 
   /**
    * Find inverse mesh cell, in which the point (x,y,z) resides.
@@ -538,9 +538,34 @@ public: // methods
     * @param dvar_dy y-coord of gradient
     * @param dvar_dz z-coord of gradient
     */
-  virtual void computeNablaVar(const size_t& field_index, const size_t& var_index, const size_t& l_cell,
-                               real& dvar_dx, real& dvar_dy, real& dvar_dz);
+//moved to Patch  virtual void computeNablaVar(const size_t& field_index, const size_t& var_index, const size_t& l_cell,
+//                               real& dvar_dx, real& dvar_dy, real& dvar_dz);
 
+
+  /**
+   * Compute abstract nabla coefficients as weighted sets. Trivial central differences on
+   * the CartesianPatch.
+   * @param l_cell l-index of cell
+   * @param gradx_ws coefficient set for d/dx
+   * @param grady_ws coefficient set for d/dy
+   * @param gradz_ws coefficient set for d/dz
+   */
+  virtual void computeNablaCoeffsWS(const size_t& l_cell,
+                                    WeightedSet<real>& gradx_ws,
+                                    WeightedSet<real>& grady_ws,
+                                    WeightedSet<real>& gradz_ws);
+
+  /**
+   * Compute nabla(a), where a is a real C-style array. Trivial central differences on
+   * the CartesianPatch.
+   * @param a C-style real array
+   * @param l_cell l-index of cell
+   * @param gradx da/dx
+   * @param grady da/dy
+   * @param gradz da/dz
+   */
+  virtual void computeNablaArray(const real* a, const size_t& l_cell,
+                                 real& gradx, real& grady, real& gradz);
 
   virtual int findCell(vec3_t xo);
 

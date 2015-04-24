@@ -753,6 +753,7 @@ real* Patch::getGpuData()
   return m_GpuData;
 }
 
+
 int Patch::findCell(vec3_t xo)
 {
   int id_cell = -1;
