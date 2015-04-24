@@ -1063,9 +1063,9 @@ bool CartesianPatch::linearCCInterpolCoeffs (const real& s_test,
   real rs_test = s_test / ds;
 
   // Compute limits of s sectors
-  real rs0 = float(ijk_donor_first);
+  real rs0 = real(ijk_donor_first);
   real rs1 = rs0 + 0.5;
-  real rs2 = float(ijk_donor_afterlast) - 0.5;
+  real rs2 = real(ijk_donor_afterlast) - 0.5;
   real rs3 = rs2 + 0.5;
 
   // Check sector
@@ -1125,7 +1125,7 @@ bool CartesianPatch::linearCCInterpolCoeffs (const real& s_test,
       BUG;
     }
     index_cell_ref = size_t(lindex_cell_ref); // num only to ensure rounding down
-    real rs_cell_ref = 0.5 + float(index_cell_ref);  // rs-coordinate of reference cell
+    real rs_cell_ref = 0.5 + real(index_cell_ref);  // rs-coordinate of reference cell
     rs_coeff = rs_test - rs_cell_ref;           // weight distribution ( = rs-distance from rs_cell_ref)
   }
 
