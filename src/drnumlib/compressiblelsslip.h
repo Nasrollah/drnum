@@ -64,9 +64,9 @@ public:
     real p = extrapolate(h0, h1, h2, p1, p2);
     real T = extrapolate(h0, h1, h2, T1, T2);
     TGas::primitiveToConservative(p, T, u, v, w, var);
-    /*
+
     bool bad = false;
-    for (size_t i_var = 0; i_var < DIM; ++i_var) {
+    for (size_t i_var = 0; i_var < 5; ++i_var) {
       if (isnan(var[i_var]) || isinf(var[i_var])) {
         bad = true;
       }
@@ -75,7 +75,7 @@ public:
       printf("p=%f, T=%f, u=%f, v=%f, w=%f, rho=%f, h0=%f, h1=%f, h2=%f\n", p, T, u, v, w, var[0], h0, h1, h2);
       asm("trap;");
     }
-    */
+
   }
 
 };

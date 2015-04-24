@@ -287,6 +287,7 @@ inline CUDA_DH bool logicalXor(bool a, bool b)
 struct ijk_t
 {
   size_t i, j, k;
+  ijk_t() { this->i = 0; this->j = 0; this->k = 0; }
   ijk_t(size_t i, size_t j, size_t k) { this->i = i; this->j = j; this->k = k; }
 };
 
