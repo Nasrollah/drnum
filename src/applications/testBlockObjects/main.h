@@ -75,6 +75,9 @@
 #include "lsobccompressibleswallop.h"
 #include "lsobccompressibleeulerop.h"
 
+#define NUM_VARS 6
+
+
 class EaFlux
 {
 
@@ -84,7 +87,7 @@ protected:
   //typedef Upwind2<SecondOrder>                           reconstruction_t;
 
   typedef Upwind2<5,VanAlbada>                              reconstruction_t;
-  typedef AusmPlus<reconstruction_t, PerfectGas>            euler_t;
+  typedef AusmPlus<NUM_VARS, reconstruction_t, PerfectGas>            euler_t;
   //typedef KNP<reconstruction_t, PerfectGas>               euler_t;
   typedef CompressibleSlipFlux<5, Upwind1<5>, PerfectGas>      wall_t;
   typedef CompressibleViscFlux<5, PerfectGas>                  viscous_t;
