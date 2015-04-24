@@ -110,9 +110,12 @@ private: // attributes
 
 protected: // attributes
 
-  size_t m_mypatchtype;       ///< Type-code as defined by derived patches. Example 1001: CartesianPatch, etc...
-  string m_patchcomment;      ///< Optional comment for this patch to be read/written in patchgrid files
-  CodeString m_solvercodes;   ///< String containing infos for choice of field-fluxes, RB-fluxes, sources, ...
+  size_t m_mypatchtype;        ///< Type-code as defined by derived patches. Example 1001: CartesianPatch, etc...
+  string m_patchcomment;       ///< Optional comment for this patch to be read/written in patchgrid files
+  CodeString m_solvercodes;    ///< String containing infos for choice of field-fluxes, RB-fluxes, sources, ...
+
+  real*  m_ExtraCPUData;       ///< extra data block of this block to store additional varsets, CPU only
+  size_t m_NumExtraCPUVarsets; ///< number of extra variable sets to be stored after m_ExtraCPUData of patches
 
   // settings
   bool m_InterpolateData;     ///< Flag indicates wether to interpolate data on interpatch transfers
@@ -295,6 +298,7 @@ public: // methods
 
   void  setNumberOfFields(size_t num_fields) { m_NumFields = num_fields; }
   void  setNumberOfVariables(size_t num_variables) { m_NumVariables = num_variables; }
+  void setNumExtraCPUVarsets(size_t num_extra_cpu_varsets) {m_NumExtraCPUVarsets = num_extra_cpu_varsets; }
 
 
   /**
@@ -675,6 +679,9 @@ public: // methods
   Transformation getTransformation() { return m_Transformation; }
   CoordTransformVV getTransformInertial2This() { return m_TransformInertial2This; }
 
+  real* getExtraCPUVarset(size_t i_variable) {
+    return m_ExtraCPUData + i_variable*m_VariableSize;
+  }
 
   /** Compute ...
     * @return smallest characteristic length.

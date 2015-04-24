@@ -44,6 +44,8 @@ PatchGrid::PatchGrid(size_t num_seeklayers, size_t num_addprotectlayers)
   m_InterpolateData = false;
   m_TransferType = "error";
   m_BboxOk = false;
+
+  m_NumExtraCPUVarsets = 0;
 }
 
 
@@ -56,6 +58,12 @@ void  PatchGrid::setNumberOfFields(size_t num_fields)
 void  PatchGrid::setNumberOfVariables(size_t num_variables)
 {
   m_NumVariables = num_variables;
+}
+
+
+void PatchGrid::setNumExtraCPUVarsets(size_t num_extra_cpu_varsets)
+{
+  m_NumExtraCPUVarsets = num_extra_cpu_varsets;
 }
 
 
@@ -473,6 +481,8 @@ void PatchGrid::setGeneralAttributes(Patch* patch)
   patch->setNumAddProtectLayers(m_NumAddProtectLayers);
   patch->setInterpolateData(m_InterpolateData);
   patch->setTransferPadded(m_TransferPadded);
+  // Extra CPU variables
+  patch->setNumExtraCPUVarsets(m_NumExtraCPUVarsets);
 }
 
 

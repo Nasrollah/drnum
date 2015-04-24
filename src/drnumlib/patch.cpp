@@ -53,6 +53,9 @@ Patch::Patch(PatchGrid *patch_grid, size_t num_seeklayers, size_t num_addprotect
   m_GpuActive = NULL;
   m_GpuDataSet = false;
   m_VectorVarIndices = patch_grid->getVectorVarIndices();
+
+  m_ExtraCPUData = NULL;
+  m_NumExtraCPUVarsets = 0;
 }
 
 Patch::~Patch()
@@ -712,6 +715,7 @@ void Patch::allocateData()
     m_IsSplitCell[i] = false;
     m_Active[i] = true;
   }
+  m_ExtraCPUData = new real [m_NumExtraCPUVarsets * m_VariableSize];
 }
 
 void Patch::deleteData()
@@ -722,6 +726,7 @@ void Patch::deleteData()
   if (m_Active) {
     delete [] m_Active;
   }
+  /// @todo delete m_ExtraCPUData ?
 }
 
 void Patch::resize(size_t variable_size)
