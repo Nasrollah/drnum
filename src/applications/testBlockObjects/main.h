@@ -354,6 +354,7 @@ void run()
   patch_grid.setNumberOfVariables(6);
   // problem? patch_grid.setNumberOfVariables(6);
 
+  patch_grid.setNumExtraCPUVarsets(1);  // use this to store level set info
 
   patch_grid.defineVectorVar(1);
   patch_grid.setInterpolateData();
