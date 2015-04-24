@@ -1063,9 +1063,9 @@ bool CartesianPatch::linearCCInterpolCoeffs (const real& s_test,
   real rs_test = s_test / ds;
 
   // Compute limits of s sectors
-  real rs0 = float(ijk_donor_first);
+  real rs0 = real(ijk_donor_first);
   real rs1 = rs0 + 0.5;
-  real rs2 = float(ijk_donor_afterlast) - 0.5;
+  real rs2 = real(ijk_donor_afterlast) - 0.5;
   real rs3 = rs2 + 0.5;
 
   // Check sector
@@ -1125,7 +1125,7 @@ bool CartesianPatch::linearCCInterpolCoeffs (const real& s_test,
       BUG;
     }
     index_cell_ref = size_t(lindex_cell_ref); // num only to ensure rounding down
-    real rs_cell_ref = 0.5 + float(index_cell_ref);  // rs-coordinate of reference cell
+    real rs_cell_ref = 0.5 + real(index_cell_ref);  // rs-coordinate of reference cell
     rs_coeff = rs_test - rs_cell_ref;           // weight distribution ( = rs-distance from rs_cell_ref)
   }
 
@@ -1588,10 +1588,12 @@ void CartesianPatch::cellOverNodeNeighbours (const size_t& i_c,
   }
 }
 
-
+/*
 void CartesianPatch::computeNablaVar(const size_t& field_index, const size_t& var_index, const size_t& l_cell,
                                      real& dvar_dx, real& dvar_dy, real& dvar_dz)
 {
+  /// @todo change error condition analogue to computeNablaCoeffsWS
+
   size_t i, j, k;
   size_t l_plus, l_minus;
   bool skip_plus, skip_minus;
@@ -1652,6 +1654,156 @@ void CartesianPatch::computeNablaVar(const size_t& field_index, const size_t& va
     dvar_dz = (var[l_plus] - var[l_cell]) / m_Dz;
   }
   else {
+    BUG;
+  }
+}
+*/
+
+void CartesianPatch::computeNablaCoeffsWS(const size_t& l_cell,
+                                          WeightedSet<real>& gradx_ws,
+                                          WeightedSet<real>& grady_ws,
+                                          WeightedSet<real>& gradz_ws)
+{
+  // Coeff sets for gradx, grady, gradz:
+  // * central differences, unless on patch boundaries
+  // * one sided differences on boundaries for components needing so
+  size_t i, j, k;
+  size_t l_plus, l_minus;
+  bool skip_plus, skip_minus;
+
+  ijk(l_cell,
+      i, j, k);
+
+  // d/dx
+  l_plus  = save_index(i+1, j  , k  ,
+                       skip_plus);
+  l_minus = save_index(i-1, j  , k  ,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    gradx_ws.pushBack(l_plus,   1./(2.*m_Dx));
+    gradx_ws.pushBack(l_minus, -1./(2.*m_Dx));
+    //dvar_dx = (var[l_plus] - var[l_minus]) / (2.*m_Dx);
+  }
+  else if (!skip_minus) {  // one sided i-1, i
+    gradx_ws.pushBack(l_cell,   1./m_Dx);
+    gradx_ws.pushBack(l_minus, -1./m_Dx);
+    //dvar_dx = (var[l_cell] - var[l_minus]) / m_Dx;
+  }
+  else if (!skip_plus) {  // one sided i, i+1
+    gradx_ws.pushBack(l_plus,   1./m_Dx);
+    gradx_ws.pushBack(l_cell,  -1./m_Dx);
+    //dvar_dx = (var[l_plus] - var[l_cell]) / m_Dx;
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
+    BUG;
+  }
+
+  /// @todo check for cut&paste errors
+  // d/dy
+  l_plus  = save_index(i  , j+1, k  ,
+                       skip_plus);
+  l_minus = save_index(i  , j-1, k  ,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    grady_ws.pushBack(l_plus,   1./(2.*m_Dy));
+    grady_ws.pushBack(l_minus, -1./(2.*m_Dy));
+  }
+  else if (!skip_minus) {  // one sided i-1, i
+    grady_ws.pushBack(l_cell,   1./m_Dy);
+    grady_ws.pushBack(l_minus, -1./m_Dy);
+  }
+  else if (!skip_plus) {  // one sided i, i+1
+    grady_ws.pushBack(l_plus,   1./m_Dy);
+    grady_ws.pushBack(l_cell,  -1./m_Dy);
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
+    BUG;
+  }
+
+  // d/dz
+  l_plus  = save_index(i  , j  , k+1,
+                       skip_plus);
+  l_minus = save_index(i  , j  , k-1,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    gradz_ws.pushBack(l_plus,   1./(2.*m_Dz));
+    gradz_ws.pushBack(l_minus, -1./(2.*m_Dz));
+  }
+  else if (!skip_minus) {  // one sided i-1, i
+    gradz_ws.pushBack(l_cell,   1./m_Dz);
+    gradz_ws.pushBack(l_minus, -1./m_Dz);
+  }
+  else if (!skip_plus) {  // one sided i, i+1
+    gradz_ws.pushBack(l_plus,   1./m_Dz);
+    gradz_ws.pushBack(l_cell,  -1./m_Dz);
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
+    BUG;
+  }
+}
+
+
+void CartesianPatch::computeNablaArray(const real* a, const size_t& l_cell,
+                                       real& da_dx, real& da_dy, real& da_dz)
+{
+  size_t i, j, k;
+  size_t l_plus, l_minus;
+  bool skip_plus, skip_minus;
+
+  ijk(l_cell,
+      i, j, k);
+
+  // da/dx
+  l_plus  = save_index(i+1, j  , k  ,
+                       skip_plus);
+  l_minus = save_index(i-1, j  , k  ,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    da_dx = (a[l_plus] - a[l_minus]) / (2.*m_Dx);
+  }
+  else if (!skip_minus) {  // one sided i-1, i
+    da_dx = (a[l_cell] - a[l_minus]) / m_Dx;
+  }
+  else if (!skip_plus) {  // one sided i, i+1
+    da_dx = (a[l_plus] - a[l_cell]) / m_Dx;
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
+    BUG;
+  }
+
+  // da_dy
+  l_plus  = save_index(i  , j+1, k  ,
+                       skip_plus);
+  l_minus = save_index(i  , j-1, k  ,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    da_dy = (a[l_plus] - a[l_minus]) / (2.*m_Dy);
+  }
+  else if (!skip_minus) {  // one sided j-1, j
+    da_dy = (a[l_cell] - a[l_minus]) / m_Dy;
+  }
+  else if (!skip_plus) {  // one sided j, j+1
+    da_dy = (a[l_plus] - a[l_cell]) / m_Dy;
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
+    BUG;
+  }
+
+  // da_dz
+  l_plus  = save_index(i  , j  , k+1,
+                       skip_plus);
+  l_minus = save_index(i  , j  , k-1,
+                       skip_minus);
+  if (!skip_plus && !skip_minus) {  // go central
+    da_dz = (a[l_plus] - a[l_minus]) / (2.*m_Dz);
+  }
+  else if (!skip_minus) {  // one sided k-1, k
+    da_dz = (a[l_cell] - a[l_minus]) / m_Dz;
+  }
+  else if (!skip_plus) {  // one sided k, k+1
+    da_dz = (a[l_plus] - a[l_cell]) / m_Dz;
+  }
+  else {  // skip_minus && skip_plus : some severe indexing error or deteriorate patch
     BUG;
   }
 }

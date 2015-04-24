@@ -465,6 +465,9 @@ void run()
     typedef StoredLevelSet ls_t;
     bc_t bc;
     ls_t ls(5);
+
+    //ls.G()
+
     runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<NUM_VARS, 1, ls_t, bc_t>(&patch_grid, ls, bc, cuda_device, thread_limit));
   }
 #endif

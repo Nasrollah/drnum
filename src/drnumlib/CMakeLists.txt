@@ -34,6 +34,7 @@ SET(drnumlib_SOURCES
     gpu_cartesianpatch.h
     gpu_levelsetbc.h
     gpu_cartesianlevelsetbc.h
+    gpu_newcartesianlevelsetbc.h
     gpu_cylinderincartesianpatch.h
     gpu_patch.h
     iteratorfeeder.cpp
@@ -98,6 +99,7 @@ SET(drnumlib_SOURCES
     simplelevelsets.h
     timeaverage.h
     timeaverage.cpp
+    weightedset.h
 )
 
 ADD_LIBRARY(drnumlib SHARED ${drnumlib_SOURCES})
