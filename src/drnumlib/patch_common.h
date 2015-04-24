@@ -30,6 +30,9 @@ size_t  m_FieldSize;    ///< length of each field
 size_t  m_VariableSize; ///< length of each variable
 bool*   m_Active;       ///< a field indicating if a cell is active (e.g. for immersed boundaries)
 
+
+
+
 PatchGrid* m_PatchGrid; ///< the patch grid this patch belongs to
 
 Transformation m_Transformation; /// @todo merge: kept for compatibility

@@ -64,6 +64,9 @@ protected: // attributes
 
   vector<size_t> m_VectorVarIndices;  ///< definition of vectorial variables by index corresponding x-direction. Subsequent two: y and z
 
+  size_t m_NumExtraCPUVarsets;  ///< number of extra variable sets to be stored after m_ExtraCPUData of patches
+
+
 private: // methods
 
 protected: // methods
@@ -90,6 +93,14 @@ public: // methods
     * @param num_variables number of variables.
     */
   void  setNumberOfVariables(size_t num_variables);
+
+
+  /**
+    * Set number of extra variable sets to be stored on Patch::m_ExtraCPUData on all patches of
+    * this patchgrid.
+    * @param num_extra_cpu_varsets number of extra variable sets
+    */
+  void  setNumExtraCPUVarsets(size_t num_extra_cpu_varsets);
 
 
   /**
