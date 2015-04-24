@@ -63,7 +63,7 @@ public: // methods
       }
     }
     if (bad) {
-      printf("p=%f, T=%f, rho=%f, h0=%f, h1=%f, h2=%f\n", p, T, var[0], h0, h1, h2);
+      //printf("p=%f, T=%f, rho=%f, h0=%f, h1=%f, h2=%f\n", p, T, var[0], h0, h1, h2);
       asm("trap;");
     }
 
