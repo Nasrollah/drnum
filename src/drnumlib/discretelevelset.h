@@ -37,6 +37,7 @@
 #include "patchgrid.h"
 #include "postprocessingvariables.h"
 #include "cartesianpatch.h"
+#include "geometrytools.h"
 
 #ifdef GPU
 #include "gpu_cartesianpatch.h"
@@ -75,7 +76,10 @@ private: // attributes
 
   PatchGrid*        m_PatchGrid;
   QVector<Triangle> m_Triangles;
-  QVector<vec3_t>   m_Normals;
+  QVector<vec3_t>   m_TriNormals;
+  QVector<vec3_t>   m_NodeNormals;
+  QVector<vec3_t>   m_Nodes;
+  QVector<ijk_t>    m_TriangleNodes;
   TriangleTree      m_TriangleTree;
   real              m_Tol;
 
@@ -128,7 +132,7 @@ void DiscreteLevelSet<DIM,IVAR>::readGeometry(QString geometry_file_name)
     cout << "Reading STL geometry" << endl;
     vtkSmartPointer<vtkSTLReader> reader = vtkSmartPointer<vtkSTLReader>::New();
     reader->SetFileName(qPrintable(geometry_file_name));
-    reader->MergingOff();
+    reader->MergingOn();
     reader->Update();
     poly->DeepCopy(reader->GetOutput());
   } else if (geometry_file_name.endsWith(".ply")) {
@@ -152,10 +156,16 @@ void DiscreteLevelSet<DIM,IVAR>::computeLevelSet(vtkPolyData *poly)
   // build triangle tree
   {
     int num_faces = poly->GetNumberOfCells();
+    int num_nodes = poly->GetNumberOfPoints();
     m_Triangles.clear();
-    m_Normals.clear();
+    m_TriNormals.clear();
     m_Triangles.fill(Triangle(), num_faces);
-    m_Normals.fill(vec3_t(0,0,0), num_faces);
+    m_TriNormals.fill(vec3_t(0,0,0), num_faces);
+    m_NodeNormals.clear();
+    m_NodeNormals.fill(vec3_t(0,0,0), num_nodes);
+    m_TriangleNodes.resize(num_faces);
+    m_Nodes.resize(num_nodes);
+    QVector<real> node_weights(num_nodes, 0.0);
     for (vtkIdType id_cell = 0; id_cell < num_faces; ++id_cell) {
       vtkIdType num_pts, *pts;
       poly->GetCellPoints(id_cell, num_pts, pts);
@@ -166,14 +176,32 @@ void DiscreteLevelSet<DIM,IVAR>::computeLevelSet(vtkPolyData *poly)
       poly->GetPoint(pts[0], a.data());
       poly->GetPoint(pts[1], b.data());
       poly->GetPoint(pts[2], c.data());
+      m_Nodes[pts[0]] = vec3_t(a[0], a[1], a[2]);
+      m_Nodes[pts[1]] = vec3_t(b[0], b[1], b[2]);
+      m_Nodes[pts[2]] = vec3_t(c[0], c[1], c[2]);
       m_Triangles[id_cell] = Triangle(Point(a[0], a[1], a[2]), Point(b[0], b[1], b[2]), Point(c[0], c[1], c[2]));
       vec3_t u = b - a;
       vec3_t v = c - a;
-      m_Normals[id_cell] = u.cross(v);
-      m_Normals[id_cell].normalise();
+      m_TriNormals[id_cell] = u.cross(v);
+      m_TriNormals[id_cell].normalise();
+      real w0 = fabs(GeometryTools::angle(c-a, b-a));
+      real w1 = fabs(GeometryTools::angle(a-b, c-b));
+      real w2 = fabs(GeometryTools::angle(b-c, a-c));
+      node_weights[pts[0]] += w0;
+      node_weights[pts[1]] += w1;
+      node_weights[pts[2]] += w2;
+      m_NodeNormals[pts[0]] += w0*m_TriNormals[id_cell];
+      m_NodeNormals[pts[1]] += w1*m_TriNormals[id_cell];
+      m_NodeNormals[pts[2]] += w2*m_TriNormals[id_cell];
+      m_TriangleNodes[id_cell].i = pts[0];
+      m_TriangleNodes[id_cell].j = pts[1];
+      m_TriangleNodes[id_cell].k = pts[2];
     }
     m_TriangleTree.rebuild(m_Triangles.begin(), m_Triangles.end());
     m_TriangleTree.accelerate_distance_queries();
+    for (int i = 0; i < m_NodeNormals.size(); ++i) {
+      m_NodeNormals[i] *= 1.0/node_weights[i];
+    }
   }
 
   int count = 0;
@@ -315,7 +343,7 @@ void DiscreteLevelSet<DIM,IVAR>::interpolate(CartesianPatch* patch, size_t i1, s
 template <unsigned int DIM, unsigned int IVAR>
 real DiscreteLevelSet<DIM,IVAR>::computePointLevelSet(vec3_t x)
 {
-  real g;
+  real G;
   try {
     Point p(x[0], x[1], x[2]);
     TrianglePointAndPrimitiveId result = m_TriangleTree.closest_point_and_primitive(p);
@@ -324,14 +352,32 @@ real DiscreteLevelSet<DIM,IVAR>::computePointLevelSet(vec3_t x)
     int id = (T - m_Triangles.begin());
     vec3_t x_snap = vec3_t(cp[0], cp[1], cp[2]);
     vec3_t v = x - x_snap;
-    g = v.abs();
-    if (v*m_Normals[id] < 0) {
-      g *= -1;
+    G = v.abs();
+
+    vec3_t a  = m_Nodes[m_TriangleNodes[id].i];
+    vec3_t b  = m_Nodes[m_TriangleNodes[id].j];
+    vec3_t c  = m_Nodes[m_TriangleNodes[id].k];
+    vec3_t na = m_NodeNormals[m_TriangleNodes[id].i];
+    vec3_t nb = m_NodeNormals[m_TriangleNodes[id].j];
+    vec3_t nc = m_NodeNormals[m_TriangleNodes[id].k];
+
+    mat3_t M;
+    M[0] = b - a;
+    M[1] = c - a;
+    M[2] = M[0].cross(M[1]);
+    M = M.transp();
+    M = M.inverse();
+    vec3_t r = x_snap - a;
+    r = M*r;
+    vec3_t n = na + r[0]*(nb - na) + r[1]*(nc - na);
+
+    if (v*n < 0) {
+      G *= -1;
     }
   } catch (...) {
     ERROR("cannot compute distance");
   }
-  return g;
+  return G;
 }
 
 template <unsigned int DIM, unsigned int IVAR>
