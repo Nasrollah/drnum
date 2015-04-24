@@ -54,7 +54,6 @@ private: // types
   typedef K::Ray_3      Ray;
   typedef K::Line_3     Line;
   typedef K::Point_3    Point;
-  //typedef K::Segment_3  Segment;
   typedef K::Triangle_3 Triangle;
 
   typedef QVector<Triangle>::iterator                       TriangleIterator;
@@ -62,13 +61,6 @@ private: // types
   typedef CGAL::AABB_traits<K, TrianglePrimitive>           TriangleTraits;
   typedef CGAL::AABB_tree<TriangleTraits>                   TriangleTree;
   typedef TriangleTree::Point_and_primitive_id              TrianglePointAndPrimitiveId;
-
-  /*
-  typedef QVector<Segment>::iterator                       SegmentIterator;
-  typedef CGAL::AABB_segment_primitive<K, SegmentIterator> SegmentPrimitive;
-  typedef CGAL::AABB_traits<K, SegmentPrimitive>           SegmentTraits;
-  typedef CGAL::AABB_tree<SegmentTraits>                   SegmentTree;
-  */
 
 
 private: // attributes
