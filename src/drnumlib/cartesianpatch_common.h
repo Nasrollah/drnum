@@ -108,10 +108,10 @@ CUDA_DH void getVar(DIM, size_t i_field, size_t i, size_t j, size_t k, real* var
  * @param k third Cartesian index
  * @param var will hold the conservative variable set afterwards (needs to be allocated beforehand)
  */
-CUDA_DH void getVarDim(unsigned int dim, size_t i_field, size_t i, size_t j, size_t k, real* var)
+CUDA_DH void getVarDim(size_t i_field, size_t i, size_t j, size_t k, real* var)
 {
   GlobalDebug::ijk(i, j, k);
-  for (size_t i_var = 0; i_var < dim; ++i_var) {
+  for (size_t i_var = 0; i_var < numVariables(); ++i_var) {
     var[i_var] = f(i_field, i_var, i, j, k);
   }
 }

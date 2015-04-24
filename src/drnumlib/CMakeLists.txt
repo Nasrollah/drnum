@@ -18,6 +18,8 @@ SET(drnumlib_SOURCES
     compressiblesolidwallbobc.cpp
     compressiblelschamber.h
     compressiblelsslip.h
+    compressiblevariables.h
+    compressiblevariablesandg.h
     coneobject.cpp
     configmap.cpp
     containertricks.h
@@ -26,7 +28,7 @@ SET(drnumlib_SOURCES
     cudatools.h
     cylinderobject.cpp
     debug.cpp
-    discretelevelset.h
+    discretelevelset.cpp
     donor_t.h
     drnum.h
     externalexchangelist.cpp
@@ -49,6 +51,7 @@ SET(drnumlib_SOURCES
     patchgroups.cpp
     perfectgas.h
     prismaticlayerpatch.cpp
+    postprocessingvariables.h
     raster.cpp
     rungekutta.cpp
     sphereobject.cpp

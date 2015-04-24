@@ -679,7 +679,8 @@ public: // methods
   Transformation getTransformation() { return m_Transformation; }
   CoordTransformVV getTransformInertial2This() { return m_TransformInertial2This; }
 
-  real* getExtraCPUVarset(size_t i_variable) {
+  real* getExtraCPUVarset(size_t i_variable)
+  {
     return m_ExtraCPUData + i_variable*m_VariableSize;
   }
 
