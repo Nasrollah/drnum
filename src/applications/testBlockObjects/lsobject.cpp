@@ -292,10 +292,9 @@ void LSObject::extractBCellLayers()
       //BUG;
     }
   }
+
   // 3b) Check vectorization (uniquenes) and if group 0 contains all dst-cells
   vector<real*> addresses;
-  // vector<size_t> raw_groupsize;
-  // vector<size_t> unique_groupsize;
   bool no_error = true;
   for (size_t i_g = 0; i_g < m_LSBCList.num_groups; i_g++) {  // loop groups
     addresses.clear();
@@ -309,7 +308,8 @@ void LSObject::extractBCellLayers()
     // (equivalent to a vectoriztation error)
     sort(addresses.begin(), addresses.end());
     size_t raw_size = addresses.size();
-    unique(addresses.begin(), addresses.end());
+    vector<real*>::iterator it = unique(addresses.begin(), addresses.end());
+    addresses.resize(it - addresses.begin());
     size_t unique_size = addresses.size();
     if(raw_size != unique_size) {
       cout << "Error, vector group " << i_g << " with multiple left side addresses." << endl;
@@ -328,7 +328,8 @@ void LSObject::extractBCellLayers()
       // were left side addresses in groups of higher index, that did not exist in the first group 0
       // This is a concat initializer error
       sort(addresses.begin(), addresses.end());
-      unique(addresses.begin(), addresses.end());
+      it = unique(addresses.begin(), addresses.end());
+      addresses.resize(it - addresses.begin());
       unique_size = addresses.size();
       if (unique_size > unique_size_0) {
         cout << "Concat-init-error: vector group 0 did not contain all left side addresses" << endl;
