@@ -46,8 +46,8 @@ public:
 
   virtual string getScalarName(int i) const;
   virtual string getVectorName(int i) const;
-  virtual real   getScalar(int i, real* var, vec3_t) const;
-  virtual vec3_t getVector(int i, real* var, vec3_t) const;
+  virtual real   getScalar(int i, Patch* patch, int index, vec3_t x) const;
+  virtual vec3_t getVector(int i, Patch* patch, int index, vec3_t x) const;
 
 };
 
@@ -79,29 +79,45 @@ string CompressibleVariables<TGas>::getVectorName(int i) const
 }
 
 template <typename TGas>
-real CompressibleVariables<TGas>::getScalar(int i, real *var, vec3_t) const
+real CompressibleVariables<TGas>::getScalar(int i, Patch* patch, int index, vec3_t x) const
 {
   real p, T, u, v, w;
+  real* var = patch->createVar();
+  patch->getVarDim(0, index, var);
+
   m_Gas.conservativeToPrimitive(var, p, T, u, v, w);
 
-  if (i == 0) return sqrt((u*u + v*v + w*w)/(m_Gas.gamma()*m_Gas.R()*T));
-  if (i == 1) return p;
-  if (i == 2) return T;
-  if (i == 3) return var[0];
-  if (i == 4) return TGas::cp(var)*log(T/m_RefTemperature) - TGas::R(var)*log(p/m_RefPressure);
-  BUG;
-  return 0;
+  real scalar = 0;
+
+  if      (i == 0) scalar = sqrt((u*u + v*v + w*w)/(m_Gas.gamma()*m_Gas.R()*T));
+  else if (i == 1) scalar = p;
+  else if (i == 2) scalar = T;
+  else if (i == 3) scalar = var[0];
+  else if (i == 4) scalar = TGas::cp(var)*log(T/m_RefTemperature) - TGas::R(var)*log(p/m_RefPressure);
+
+  else BUG;
+
+  delete [] var;
+  return scalar;
 }
 
 template <typename TGas>
-vec3_t CompressibleVariables<TGas>::getVector(int i, real *var, vec3_t) const
+vec3_t CompressibleVariables<TGas>::getVector(int i, Patch* patch, int index, vec3_t x) const
 {
   real p, T, u, v, w;
+  real* var = patch->createVar();
+  patch->getVarDim(0, index, var);
+
   m_Gas.conservativeToPrimitive(var, p, T, u, v, w);
 
-  if (i == 0) return vec3_t(u, v, w);
-  BUG;
-  return vec3_t(0,0,0);
+  vec3_t vec(0,0,0);
+
+  if (i == 0) vec = vec3_t(u, v, w);
+
+  else BUG;
+
+  delete [] var;
+  return vec;
 }
 
 #endif // COMPRESSIBLEVARIABLES_H

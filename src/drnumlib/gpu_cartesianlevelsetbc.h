@@ -463,6 +463,11 @@ __global__ void GPU_CartesianLevelSetInsideCellsBC_kernel(GPU_CartesianPatch pat
               total_weight += weight;
 
               for (size_t i_var = 0; i_var < DIM - NUM_LS; ++i_var) {
+                if (isnan(var_bc[i_var]) || isinf(var_bc[i_var])) {
+                  int iv = i_var;
+                  printf("bad %f, %f, %d, %d\n", var_bc[i_var], weight, iv, extrapolate);
+                  asm("trap;");
+                }
                 var[i_var] += weight*var_bc[i_var];
               }
 
@@ -476,7 +481,7 @@ __global__ void GPU_CartesianLevelSetInsideCellsBC_kernel(GPU_CartesianPatch pat
       for (size_t i_var = 0; i_var < DIM - NUM_LS; ++i_var) {
         var_bc[i_var] = var[i_var]/total_weight;
         if (isnan(var_bc[i_var])) {
-          printf("%f, %f, %d\n", total_weight, var[i_var], extrapolate);
+          printf("%f, %f, %d, %d\n", total_weight, var[i_var], extrapolate, count);
           asm("trap;");
         }
       }

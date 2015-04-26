@@ -56,6 +56,17 @@ public: // methods
 
     TGas::primitiveToConservative(p, T, Ma*a, 0, 0, var);
 
+    bool bad = false;
+    for (size_t i_var = 0; i_var < 5; ++i_var) {
+      if (isnan(var[i_var]) || isinf(var[i_var])) {
+        bad = true;
+      }
+    }
+    if (bad) {
+      //printf("p=%f, T=%f, rho=%f, h0=%f, h1=%f, h2=%f\n", p, T, var[0], h0, h1, h2);
+      asm("trap;");
+    }
+
   }
 
 };

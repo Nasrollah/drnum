@@ -419,9 +419,9 @@ CUDA_DH void getVar(DIM, size_t i_field, size_t i, real *var)
  * @param i the cell index
  * @param var will hold the conservative variable set afterwards (needs to be allocated beforehand)
  */
-CUDA_DH void getVarDim(unsigned int dim, size_t i_field, size_t i, real *var)
+CUDA_DH void getVarDim(size_t i_field, size_t i, real *var)
 {
-  for (size_t i_var = 0; i_var < dim; ++i_var) {
+  for (size_t i_var = 0; i_var < numVariables(); ++i_var) {
     var[i_var] = getVariable(i_field, i_var)[i];
   }
 }
@@ -533,5 +533,9 @@ CUDA_HO void copyAttributes(T* obj)
   m_Zo                      = obj->m_Zo;
 }
 
+real* createVar()
+{
+  return new real [numVariables()];
+}
 
 

@@ -22,7 +22,7 @@
 #define COMPRESSIBLEVARIABLESANDG_H
 
 #include "drnum.h"
-#include "postprocessingvariables.h"
+#include "compressiblevariables.h"
 
 #include <QString>
 
@@ -33,81 +33,46 @@
   */
 
 template <typename TGas>
-class CompressibleVariablesAndG : public PostProcessingVariables
+class CompressibleVariablesAndG : public CompressibleVariables<TGas>
 {
 
-  TGas m_Gas;
-  real m_RefPressure;
-  real m_RefTemperature;
+  int m_ExtraVarIndex;
+
 
 public:
-  CompressibleVariablesAndG();
-  virtual int numScalars() const { return 6; }
-  virtual int numVectors() const { return 1; }
 
-  void setReferenceTemperature(real T) { m_RefTemperature = T; }
-  void setReferencePressure(real p)    { m_RefPressure = p; }
+  CompressibleVariablesAndG(int extra_var_index = 0);
+
+  virtual int numScalars() const { return 6; }
 
   virtual string getScalarName(int i) const;
-  virtual string getVectorName(int i) const;
-  virtual real   getScalar(int i, real* var, vec3_t) const;
-  virtual vec3_t getVector(int i, real* var, vec3_t) const;
+  virtual real   getScalar(int i, Patch* patch, int index, vec3_t x) const;
 
 };
 
 template <typename TGas>
-CompressibleVariablesAndG<TGas>::CompressibleVariablesAndG()
+CompressibleVariablesAndG<TGas>::CompressibleVariablesAndG(int extra_var_index)
 {
-  m_RefPressure = 1e5;
-  m_RefTemperature = 300;
+  m_ExtraVarIndex = extra_var_index;
 }
 
 template <typename TGas>
 string CompressibleVariablesAndG<TGas>::getScalarName(int i) const
 {
-  if (i == 0) return "Ma";
-  if (i == 1) return "p";
-  if (i == 2) return "T";
-  if (i == 3) return "rho";
-  if (i == 4) return "S";
-  if (i == 5) return "G";   // grey value. Body contours: G = 0.5
+  if (i <= 4) return CompressibleVariables<TGas>::getScalarName(i);
+  if (i == 5) return "G";
   BUG;
   return "N/A";
 }
 
 template <typename TGas>
-string CompressibleVariablesAndG<TGas>::getVectorName(int i) const
+real CompressibleVariablesAndG<TGas>::getScalar(int i, Patch* patch, int index, vec3_t x) const
 {
-  if (i == 0) return "U";
-  BUG;
-  return "N/A";
-}
+  if (i <= 4) return CompressibleVariables<TGas>::getScalar(i, patch, index, x);
+  if (i == 5) return patch->getExtraCPUVarset(m_ExtraVarIndex)[index];
 
-template <typename TGas>
-real CompressibleVariablesAndG<TGas>::getScalar(int i, real *var, vec3_t) const
-{
-  real p, T, u, v, w;
-  m_Gas.conservativeToPrimitive(var, p, T, u, v, w);
-
-  if (i == 0) return sqrt((u*u + v*v + w*w)/(m_Gas.gamma()*m_Gas.R()*T));
-  if (i == 1) return p;
-  if (i == 2) return T;
-  if (i == 3) return var[0];
-  if (i == 4) return TGas::cp(var)*log(T/m_RefTemperature) - TGas::R(var)*log(p/m_RefPressure);
-  if (i == 5) return var[5];
   BUG;
   return 0;
-}
-
-template <typename TGas>
-vec3_t CompressibleVariablesAndG<TGas>::getVector(int i, real *var, vec3_t) const
-{
-  real p, T, u, v, w;
-  m_Gas.conservativeToPrimitive(var, p, T, u, v, w);
-
-  if (i == 0) return vec3_t(u, v, w);
-  BUG;
-  return vec3_t(0,0,0);
 }
 
 #endif // COMPRESSIBLEVARIABLESANDG_H

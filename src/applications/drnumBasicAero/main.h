@@ -400,6 +400,7 @@ void run()
   //.. general settings (apply to all subsequent patches)
   patch_grid.setNumberOfFields(3);
   patch_grid.setNumberOfVariables(NUM_VARS);
+  patch_grid.setNumExtraCPUVarsets(1);
   patch_grid.defineVectorVar(1);
   patch_grid.setInterpolateData();
   patch_grid.setNumSeekLayers(2);  /// @todo check default = 2
@@ -434,6 +435,7 @@ void run()
   }
 
 #ifdef GPU
+  /*
   if (config.exists("chamber")) {
     if (config.getValue<bool>("chamber")) {
       real x0 = config.getValue<real>("chamber-x");
@@ -451,16 +453,17 @@ void run()
       runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<NUM_VARS, 1, ls_t, bc_t>(&patch_grid, ls, bc, cuda_device, thread_limit));
     }
   }
+  */
 
   if (config.exists("geometry")) {
     QString file_name = config.getValue<QString>("geometry");
     QTime t_levelSet;
     t_levelSet.start();
     cout << endl << "Starting Level Set Computation" << endl;
-    DiscreteLevelSet<NUM_VARS,5> ls_wall(&patch_grid);
+    DiscreteLevelSet ls_wall(&patch_grid);
     ls_wall.readGeometry(file_name);
     cout << endl << "Discrete Level Set Runtime -> " << t_levelSet.elapsed()/1000. << endl;
-    patch_grid.writeToVtk(0, "VTK-drnum/levelset", LevelSetPlotVars<5>(), -1);
+    patch_grid.writeToVtk(0, "VTK-drnum/levelset", LevelSetPlotVars(0), -1);
     typedef CompressibleLsSlip<GPU_CartesianPatch, PerfectGas> bc_t;
     typedef StoredLevelSet ls_t;
     bc_t bc;

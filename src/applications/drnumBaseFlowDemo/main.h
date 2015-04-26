@@ -207,13 +207,13 @@ void run()
         } else {
           for (size_t i = 0; i < patch->sizeI(); ++i) {
             real var[5], p, T, u, v, w;
-            patch->getVarDim(5, 0, i, j_centre, k_centre, var);
+            patch->getVarDim(0, i, j_centre, k_centre, var);
             PerfectGas::conservativeToPrimitive(var, p, T, u, v, w);
             centre_averages[i].add(t_old, u);
           }
           for (size_t k = 0; k < patch->sizeK(); ++k) {
             real var[5], p_base, T;
-            patch->getVarDim(5, 0, 0, j_centre, k, var);
+            patch->getVarDim(0, 0, j_centre, k, var);
             PerfectGas::conservativeToPrimitive(var, p_base, T);
             real cp = 2*(p_base/p - 1)/(PerfectGas::gamma()*Ma*Ma);
             vertical_averages[k].add(t_old, cp);

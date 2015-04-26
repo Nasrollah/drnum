@@ -23,6 +23,7 @@
 #define POSTPROCESSINGVARIABLES_H
 
 #include "drnum.h"
+#include "patch.h"
 
 class PostProcessingVariables
 {
@@ -34,8 +35,8 @@ public: // methods
 
   virtual string getScalarName(int i) const = 0;
   virtual string getVectorName(int i) const = 0;
-  virtual real   getScalar(int i, real* var, vec3_t x) const = 0;
-  virtual vec3_t getVector(int i, real* var, vec3_t x) const = 0;
+  virtual real   getScalar(int i, Patch* patch, int index, vec3_t x) const = 0;
+  virtual vec3_t getVector(int i, Patch* patch, int index, vec3_t x) const = 0;
 
 
 };
