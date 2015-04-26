@@ -547,6 +547,36 @@ public: // methods
 
 
   /**
+    * Compute interpolation coeffs for a single point P:(x,y,z) in coords of "this".
+    * ATTENTION: Search is restricted to "this" patch and its donor patches
+    *            as stored in m_neighbours
+    * @param x x-coord (in coord-system of this)
+    * @param y y-coord (in coord-system of this)
+    * @param z z-coord (in coord-system of this)
+    * @param all_ws vector of WeightedSets for all donor patches contributing to interpolation
+    *        at P (return reference).
+    * @return true, if successful, that is if at least one donor patch was found
+    */
+  bool interpolCoeffs4XYZRestrict(const real& x, const real& y, const real& z,
+                                  vector<pair<Patch*, WeightedSet<real> > >& all_ws);
+
+
+/// @todo Create a general search method with severe search reduction (splittree, octree, ...) on coarse resolution level
+//POSTPONED  /**
+//    * Interpolation coeffs for a single point P:(x,y,z) in coords of "this".
+//    * ATTENTION: Search is restricted to "this" patch and its donor patches
+//    *            as stored in m_neighbours
+//    * @param x x-coord (in coord-system of this)
+//    * @param y y-coord (in coord-system of this)
+//    * @param z z-coord (in coord-system of this)
+//    * @param all_ws vector of WeightedSets for all donor patches contributing to interpolation at P (return reference)
+//    * @return true, if successful, that is if at least one donor patch was found
+//    */
+//  bool computeInterpolCoeffs4XYZFull(const real& x, const real& y, const real& z,
+//                                     vector<pair<size_t, WeightedSet<real> >& all_ws);
+
+
+  /**
     * Check overlap with a box defined in xyzo.
     * @param box_xyzo_min lower coords of box
     * @param box_xyzo_min upper coords of box

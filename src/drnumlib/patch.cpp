@@ -779,6 +779,7 @@ int Patch::findCell(vec3_t xo)
   return id_cell;
 }
 
+
 void Patch::writeData(size_t i_field, QDataStream &stream)
 {
   real *data = getField(i_field);
@@ -787,10 +788,49 @@ void Patch::writeData(size_t i_field, QDataStream &stream)
   }
 }
 
+
 void Patch::readData(size_t i_field, QDataStream &stream)
 {
   real *data = getField(i_field);
   for (size_t i = 0; i < fieldSize(); ++i) {
     stream >> data[i];
   }
+}
+
+
+bool Patch::interpolCoeffs4XYZRestrict(const real& x, const real& y, const real& z,
+                                       vector<pair<Patch*, WeightedSet<real> > >& all_ws)
+{
+  // Find all interpol contributions, restricted to "this" and donor patches in m_neighbours
+  all_ws.clear();
+  WeightedSet<real> ws;
+  pair<Patch*, WeightedSet<real> > pws;
+
+  // Check "this"
+  if(computeCCDataInterpolCoeffs_V1(x, y, z,
+                                    ws)) {
+    pws.first  = this;
+    pws.second = ws;
+    all_ws.push_back(pws);
+  }
+
+  // Check donor neighbours of "this"
+  for (size_t i_nd = 0; i_nd < m_neighbours.size(); i_nd++) {
+    Patch* neighbour_patch = m_neighbours[i_nd].first;
+    CoordTransformVV trans = m_neighbours[i_nd].second;
+    vec3_t xxyyzz = trans.transform(vec3_t(x, y, z));  // point (x,y,z) in coords of neighbout patch
+    if(neighbour_patch->computeCCDataInterpolCoeffs_V1(xxyyzz[0], xxyyzz[1], xxyyzz[2],
+                                                       ws)) {
+      pws.first  = neighbour_patch;
+      pws.second = ws;
+      all_ws.push_back(pws);
+    }
+  }
+
+  // Downgrade weights in case of multiple contributing patches
+  for (size_t i_c = 0; i_c < all_ws.size(); i_c++) {
+    all_ws[i_c].second *= (1./all_ws.size());
+  }
+
+  return (all_ws.size()!=0);
 }
