@@ -14,6 +14,10 @@ geoblockobjecttest006.h
 geolevelsettest001.h
 geolevelsettest002.h
 geolevelsettest007.h
+lsbc_cell_t.h
+lsbc_list_t.h
+lsobject.h
+lsobject.cpp
 main.cpp
 main.h
 main.cu)
