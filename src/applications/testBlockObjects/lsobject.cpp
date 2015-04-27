@@ -1,20 +1,24 @@
 #include "lsobject.h"
 
-LSObject::LSObject(PatchGrid *patch_grid,
-                   size_t g_extra_index,
-                   size_t num_layers,
-                   real min_inner_g_dist,
-                   size_t trans_field_index)
+template <unsigned int SIZE, unsigned int DIM>
+LSObject<SIZE, DIM>::LSObject(PatchGrid *patch_grid,
+                              size_t g_extra_index,
+                              size_t num_layers,
+                              real min_inner_g_dist,
+                              size_t trans_field_index)
 {
   m_PatchGrid       = patch_grid;
   m_GExtraIndex     = g_extra_index;
   m_NumLayers       = num_layers;
   m_MinInnerGDist   = min_inner_g_dist;
   m_TransFieldIndex = trans_field_index;
+
+  m_LSBCListOK      = false;
 }
 
 
-void LSObject::extractBCellLayers()
+template <unsigned int SIZE, unsigned int DIM>
+void LSObject<SIZE, DIM>::extractBCellLayers()
 {
   // Find boundary cells affected and store in m_LSBCList
 
@@ -23,7 +27,7 @@ void LSObject::extractBCellLayers()
   // 1) Loop over patches and cells
   //   1a) Build 1st inner layer (layer marker: -1)
   //   1b) Build further layers
-  // 1c) Compute mirror points, interpolate and transfer cells found in this patch to layer_cells
+  //   1c) Compute mirror points, interpolate and transfer cells found in this patch to layer_cells
   // 2) Transfer to array type data structure m_LSBCList, containing all access/miorror infos for this
   //    level set. Scatter into non-recursive vector groups, while ensuring, that the first group 0
   //    contains ALL dst-cells (all receiving cells) once. Reason: This avoids need to set dst-data
@@ -33,7 +37,7 @@ void LSObject::extractBCellLayers()
 
   // 0) Set up
   // Intermediate data storage as vector. Reason: Size unknown.
-  vector<lsbc_cell_t<8,5> > layer_cells;
+  vector<lsbc_cell_t<SIZE,DIM> > layer_cells;
   // Count cells with 1,2,3,... contributions
   //   example: count_contribs[1] will later be the number of dst-cells with 2 contributors
   //            count_contribs[i_cc] will later be the number of dst-cells with i_cc+1 contributors
@@ -187,7 +191,7 @@ void LSObject::extractBCellLayers()
         for (size_t ll_c = 0; ll_c < layer_cells_pp[i_layer].size(); ll_c++) {
           layer_cell_entry_pp lce_pp = layer_cells_pp[i_layer][ll_c];
           //.. Create a first new entry for layer_cells and fill in yet known qunatities
-          lsbc_cell_t<8,5> lc;
+          lsbc_cell_t<SIZE,DIM> lc;
           lc.dst_data = patch->getField(m_TransFieldIndex);
           lc.dst_index = lce_pp.l_cell;
           lc.dst_step  = patch->variableSize();
@@ -213,7 +217,7 @@ void LSObject::extractBCellLayers()
                                                 all_ws)) {
             for (size_t i_c = 0; i_c < all_ws.size(); i_c++) {
               lc.src_data = all_ws[i_c].first->getField(m_TransFieldIndex);
-              all_ws[i_c].second.tranferToFixedArrays(8,  /// @todo make this a template class: 8 -> SIZE
+              all_ws[i_c].second.tranferToFixedArrays(SIZE,
                                                       &(lc.src_index[0]), &(lc.src_weight[0]));
               lc.src_step = all_ws[i_c].first->variableSize();
               layer_cells.push_back(lc);
@@ -236,7 +240,7 @@ void LSObject::extractBCellLayers()
   //    Consider NOTE 40: multiple contribs in direct consecution.
   //.. Size and internal list dst_cells
   m_LSBCList.dst_cells_size = layer_cells.size();
-  m_LSBCList.dst_cells = new lsbc_cell_t<8,5>[layer_cells.size()]; // make same size as layer_cells
+  m_LSBCList.dst_cells = new lsbc_cell_t<SIZE,DIM>[layer_cells.size()]; // make same size as layer_cells
   //.. Vector groups and insection indices
   size_t num_groups = count_contribs.size();
   m_LSBCList.num_groups = num_groups;
@@ -300,7 +304,7 @@ void LSObject::extractBCellLayers()
     addresses.clear();
     // insert all left side mem addresses (maps 1:1 to device)
     for (size_t i_c = m_LSBCList.group_start[0]; i_c < m_LSBCList.group_size[0]; i_c++) {
-      lsbc_cell_t<8,5> contrib = m_LSBCList.dst_cells[i_c];
+      lsbc_cell_t<SIZE,DIM> contrib = m_LSBCList.dst_cells[i_c];
       real* address = contrib.dst_data + size_t(contrib.dst_index);  // ptr-shift
       addresses.push_back(address);
     }
@@ -320,7 +324,7 @@ void LSObject::extractBCellLayers()
       size_t unique_size_0 = unique_size;
       // append all entries of all subsequent groups
       for (size_t i_c = m_LSBCList.group_start[0]+1; i_c < m_LSBCList.dst_cells_size; i_c++) {
-        lsbc_cell_t<8,5> contrib = m_LSBCList.dst_cells[i_c];
+        lsbc_cell_t<SIZE,DIM> contrib = m_LSBCList.dst_cells[i_c];
         real* address = contrib.dst_data + size_t(contrib.dst_index);  // ptr-shift
         addresses.push_back(address);
       }
@@ -340,5 +344,27 @@ void LSObject::extractBCellLayers()
   if(!no_error) {
     BUG;
   }
-//#endif
+  //#endif
+
+  m_LSBCListOK = true;  // assume that getting here means its fine
+}
+
+
+template <unsigned int SIZE, unsigned int DIM>
+lsbc_list_t<SIZE, DIM> LSObject<SIZE, DIM>::getLSBCList()
+{
+  if (!m_LSBCListOK) {
+    extractBCellLayers();
+  }
+  return m_LSBCList;
+}
+
+
+template <unsigned int SIZE, unsigned int DIM>
+lsbc_list_t<SIZE, DIM>* LSObject<SIZE, DIM>::getLSBCListPtr()
+{
+  if (!m_LSBCListOK) {
+    extractBCellLayers();
+  }
+  return &m_LSBCList;
 }
