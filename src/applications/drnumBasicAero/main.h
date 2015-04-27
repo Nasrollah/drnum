@@ -52,7 +52,7 @@
 
 #ifdef GPU
 #include "iterators/gpu_cartesianiterator.h"
-#include "gpu_cartesianlevelsetbc.h"
+//#include "gpu_cartesianlevelsetbc.h"
 #else
 #include "iterators/cartesianiterator.h"
 #endif
@@ -481,7 +481,7 @@ void run()
 
     //ls.G()
 
-    runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<NUM_VARS, 1, ls_t, bc_t>(&patch_grid, ls, bc, cuda_device, thread_limit));
+    //runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<NUM_VARS, 1, ls_t, bc_t>(&patch_grid, ls, bc, cuda_device, thread_limit));
   }
 #endif
 
