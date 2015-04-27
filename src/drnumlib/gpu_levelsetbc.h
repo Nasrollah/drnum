@@ -29,6 +29,7 @@ class GPU_LevelSetBC;
 
 #include "drnum.h"
 #include "genericoperation.h"
+#include "patchgrid.h"
 
 template <unsigned int DIM, typename TCPU, typename TGPU>
 class GPU_LevelSetBC : public GenericOperation
