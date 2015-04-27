@@ -67,7 +67,7 @@
 
 #include "lsobject.h"
 
-#define NUM_VARS 6
+#define NUM_VARS 5
 
 template <typename TReconstruction>
 class EaFlux
@@ -472,16 +472,10 @@ void run()
                                   2,    // num_layers
                                   0.,   // min_inner_g_dist
                                   0);   // trans_field_index
-    lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
+    //lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
 
-    typedef CompressibleLsSlip<GPU_CartesianPatch, PerfectGas> bc_t;
-    typedef StoredLevelSet ls_t;
-    bc_t bc;
-    ls_t ls(5);
+    //runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<8, NUM_VARS>(&patch_grid, ls_wall, lsptr_test, cuda_device, thread_limit));
 
-    //ls.G()
-
-    //runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<NUM_VARS, 1, ls_t, bc_t>(&patch_grid, ls, bc, cuda_device, thread_limit));
   }
 #endif
 

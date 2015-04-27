@@ -22,7 +22,7 @@
 #ifndef GPU_CARTESIANLEVELSETBC_H
 #define GPU_CARTESIANLEVELSETBC_H
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
+template <unsigned int SIZE, unsigned int DIM>
 class GPU_CartesianLevelSetBC;
 
 #include "gpu_levelsetbc.h"
@@ -30,10 +30,14 @@ class GPU_CartesianLevelSetBC;
 #include "drnum.h"
 #include "genericoperation.h"
 #include "gpu_cartesianpatch.h"
+#include "lsobject.h"
+#include "lsbc_cell_t.h"
+#include "discretelevelset.h"
 
 #include "perfectgas.h"
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
+
+template <unsigned int SIZE, unsigned int DIM>
 class GPU_CartesianLevelSetBC : public GPU_LevelSetBC<DIM, CartesianPatch, GPU_CartesianPatch>
 {
 
@@ -48,16 +52,18 @@ public: // data types
 
   };
 
+
 protected: // attributes
 
   QVector<QList<lsextp_cell_t> > m_InsideCells;
   QVector<lsextp_cell_t*>        m_GpuInsideCells;
+  QSet<size_t>                   m_BcIndex;
 
-  lsbc_list_t  m_BcCells;
-  lsbc_cell_t* m_GpuBcCells;
+  lsbc_list_t<SIZE,DIM>  m_BcCells;
+  lsbc_cell_t<SIZE,DIM>* m_GpuBcCells;
 
   bool m_UpdateRequired;
-  LS   m_Ls;
+  DiscreteLevelSet& m_Dls;
 
 
 protected: // methods
@@ -67,24 +73,24 @@ protected: // methods
 
 public: // methods
 
-  GPU_CartesianLevelSetBC(PatchGrid* patch_grid, LS ls, int cuda_device = 0, size_t thread_limit = 0);
+  GPU_CartesianLevelSetBC(PatchGrid* patch_grid, DiscreteLevelSet& dls, lsbc_list_t<SIZE,DIM>* bc_cell_list, int cuda_device = 0, size_t thread_limit = 0);
 
   template <typename T_Patch>
-  CUDA_DH static void grad(T_Patch& patch, LS& ls,
+  CUDA_DH static void grad(T_Patch& patch, DiscreteLevelSet& dls,
                            size_t i, size_t j, size_t k,
                            real& gx, real& gy, real& gz)
   {
-    if      (i == 0)                 gx = patch.idx()*(ls.G(patch, i+1, j, k) - ls.G(patch, i,   j, k));
-    else if (i == patch.sizeI() - 1) gx = patch.idx()*(ls.G(patch, i  , j, k) - ls.G(patch, i-1, j, k));
-    else                             gx = 0.5*patch.idx()*(ls.G(patch, i+1, j, k) - ls.G(patch, i-1, j, k));
+    if      (i == 0)                 gx = patch.idx()*(dls.G(patch, i+1, j, k) - dls.G(patch, i,   j, k));
+    else if (i == patch.sizeI() - 1) gx = patch.idx()*(dls.G(patch, i  , j, k) - dls.G(patch, i-1, j, k));
+    else                             gx = 0.5*patch.idx()*(dls.G(patch, i+1, j, k) - dls.G(patch, i-1, j, k));
 
-    if      (j == 0)                 gy = patch.idy()*(ls.G(patch, i, j+1, k) - ls.G(patch, i, j  , k));
-    else if (j == patch.sizeJ() - 1) gy = patch.idy()*(ls.G(patch, i, j  , k) - ls.G(patch, i, j-1, k));
-    else                             gy = 0.5*patch.idy()*(ls.G(patch, i, j+1, k) - ls.G(patch, i, j-1, k));
+    if      (j == 0)                 gy = patch.idy()*(dls.G(patch, i, j+1, k) - dls.G(patch, i, j  , k));
+    else if (j == patch.sizeJ() - 1) gy = patch.idy()*(dls.G(patch, i, j  , k) - dls.G(patch, i, j-1, k));
+    else                             gy = 0.5*patch.idy()*(dls.G(patch, i, j+1, k) - dls.G(patch, i, j-1, k));
 
-    if      (k == 0)                 gz = patch.idz()*(ls.G(patch, i, j, k+1) - ls.G(patch, i, j, k  ));
-    else if (k == patch.sizeK() - 1) gz = patch.idz()*(ls.G(patch, i, j, k  ) - ls.G(patch, i, j, k-1));
-    else                             gz = 0.5*patch.idz()*(ls.G(patch, i, j, k+1) - ls.G(patch, i, j, k-1));
+    if      (k == 0)                 gz = patch.idz()*(dls.G(patch, i, j, k+1) - dls.G(patch, i, j, k  ));
+    else if (k == patch.sizeK() - 1) gz = patch.idz()*(dls.G(patch, i, j, k  ) - dls.G(patch, i, j, k-1));
+    else                             gz = 0.5*patch.idz()*(dls.G(patch, i, j, k+1) - dls.G(patch, i, j, k-1));
   }
 
   CUDA_HO virtual void operator()();
@@ -92,21 +98,17 @@ public: // methods
 };
 
 
-//
-// WHAT ARE WE GOING TO DO HERE?
-//
-template <unsigned int SIZE, unsigned int DIM, typename LS>
-GPU_CartesianLevelSetBC<SIZE,DIM,LS>::GPU_CartesianLevelSetBC(PatchGrid* patch_grid, LS ls, lsbc_list_t& bc_cell_list, int cuda_device, size_t thread_limit)
-  : GPU_LevelSetBC<DIM, CartesianPatch, GPU_CartesianPatch>(patch_grid, cuda_device, thread_limit)
+template <unsigned int SIZE, unsigned int DIM>
+GPU_CartesianLevelSetBC<SIZE,DIM>::GPU_CartesianLevelSetBC(PatchGrid* patch_grid, DiscreteLevelSet& dls, lsbc_list_t<SIZE,DIM>* bc_cell_list, int cuda_device, size_t thread_limit)
+  : GPU_LevelSetBC<DIM, CartesianPatch, GPU_CartesianPatch>(patch_grid, cuda_device, thread_limit), m_Dls(dls)
 {
-  m_Ls = ls;
   m_UpdateRequired = true;
   for (int i_patch = 0; i_patch < this->m_Patches.size(); ++i_patch) {
     CartesianPatch& patch = *(this->m_Patches[i_patch]);
     for (size_t i = 0; i < patch.sizeI(); ++i) {
       for (size_t j = 0; j < patch.sizeJ(); ++j) {
         for (size_t k = 0; k < patch.sizeK(); ++k) {
-          if (ls.G(patch, i, j, k) < 0) {
+          if (dls.G(&patch, i, j, k) < 0) {
             patch.deactivate(i,j,k);
           }
         }
@@ -123,25 +125,27 @@ GPU_CartesianLevelSetBC<SIZE,DIM,LS>::GPU_CartesianLevelSetBC(PatchGrid* patch_g
     cpu2gpu.insert( m_Patches[i_patch]->getData(), m_Patches[i_patch]->getGpuData() );
   }
   // Map cpu pointers to gpu pointers
+  // And at the same time, append index of cell to m_BcCellsIndex list
   for (int c_i = 0; c_i < m_BcCells.dst_cells_size; ++c_i) {
-    lsbc_cell_t& cell_i = m_BcCells.lsbc_cell_t[c_i];
+    lsbc_cell_t<SIZE,DIM>& cell_i = m_BcCells.lsbc_cell_t<SIZE,DIM>[c_i];
     cell_i.src_data = cpu2gpu.value( cell_i.src_data );
     cell_i.dst_data = cpu2gpu.value( cell_i.dst_data );
+    m_BcIndex.insert( cell_i.dst_index );
   }
 
   // Create new gpu pointer storage variable
-  m_GpuBcCells = new lsbc_cell_t[m_BcCells.dst_cells_size];
+  m_GpuBcCells = new lsbc_cell_t<SIZE,DIM>[m_BcCells.dst_cells_size];
 
   // allocate new arrays
-  cudaMalloc(&m_GpuBcCells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t));
+  cudaMalloc(&m_GpuBcCells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t<SIZE,DIM>));
   CUDA_CHECK_ERROR;
 
-  cudaMemcpy(m_GpuBcCells, m_BcCells.dst_cells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t), cudaMemcpyHostToDevice);
+  cudaMemcpy(m_GpuBcCells, m_BcCells.dst_cells, m_BcCells.dst_cells_size*sizeof(lsbc_cell_t<SIZE,DIM>), cudaMemcpyHostToDevice);
   CUDA_CHECK_ERROR;
 }
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
-void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::update()
+template <unsigned int SIZE, unsigned int DIM>
+void GPU_CartesianLevelSetBC<SIZE,DIM>::update()
 {
   if (!m_UpdateRequired) {
     return;
@@ -157,15 +161,15 @@ void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::update()
     for (size_t i = 0; i < imax; ++i) {
       for (size_t j = 0; j < jmax; ++j) {
         for (size_t k = 0; k < kmax; ++k) {
-          if (m_Ls.G(*patch, i, j, k) < 0) {
+          if (m_Dls.G(patch, i, j, k) < 0) {
             size_t index = patch->index(i, j, k);
-            if (notInBcList(index)) {
+            if (!m_BcIndex.contains(index)) {
               lsextp_cell_t cell_i;
               cell_i.index = index;
               real gx, gy, gz;
               int count = 0;
               real total_weight = 0;
-              this->grad(patch, m_Ls, i, j, k, gx, gy, gz);
+              this->grad(patch, m_Dls, i, j, k, gx, gy, gz);
               int i_stt = -1;
               int i_end =  1;
               int j_stt = -1;
@@ -182,7 +186,7 @@ void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::update()
                 for (int dj = j_stt; dj <= j_end; ++dj) {
                   for (int dk = k_stt; dk <= k_end; ++dk) {
                     if (di != 0 || dj != 0 || dk != 0) {
-                      if (m_Ls.G(patch, i + di, j + dj, k + dk) > m_Ls.G(patch, i, j, k)) {
+                      if (m_Dls.G(patch, i + di, j + dj, k + dk) > m_Dls.G(patch, i, j, k)) {
                         if (count >= SIZE) BUG;
                         int cell_n = patch->index(i + di, j + dj, k +dk);
                         real dx = di*patch->dx();
@@ -239,9 +243,19 @@ void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::update()
   m_UpdateRequired = false;
 }
 
+CUDA_DH inline real norm(real x, real y, real z)
+{
+  return sqrt(x*x + y*y + z*z);
+}
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
-__global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t* cells, int dst_cells_size)
+CUDA_DH inline real dot(real x1, real y1, real z1, real x2, real y2, real z2)
+{
+  return (x1*x2 + y1*y2 + z1*z2);
+}
+
+
+template <unsigned int SIZE, unsigned int DIM>
+__global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t<SIZE,DIM>* cells, int dst_cells_size)
 {
   int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
@@ -282,8 +296,8 @@ __global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t* cells, int ds
   }
 }
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
-__global__ void GPU_CartesianLevelSetComputeInsideCells_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<SIZE,DIM,LS>::lsextp_cell_t* cells, size_t num_cells)
+template <unsigned int SIZE, unsigned int DIM>
+__global__ void GPU_CartesianLevelSetComputeInsideCells_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<SIZE,DIM>::lsextp_cell_t* cells, size_t num_cells)
 {
   int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
@@ -316,7 +330,7 @@ __global__ void GPU_CartesianLevelSetComputeInsideCells_kernel(GPU_CartesianPatc
 }
 
 template <unsigned int DIM, unsigned int SIZE>
-__global__ void GPU_CartesianLevelSetWriteInsideCells_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<SIZE,DIM,LS>::lsextp_cell_t* cells, size_t num_cells)
+__global__ void GPU_CartesianLevelSetWriteInsideCells_kernel(GPU_CartesianPatch patch, typename GPU_CartesianLevelSetBC<SIZE,DIM>::lsextp_cell_t* cells, size_t num_cells)
 {
   int idx = blockDim.x*blockIdx.x + threadIdx.x;
 
@@ -348,8 +362,9 @@ __global__ void GPU_CartesianLevelSetWriteBCCells_kernel(lsbc_cell_t<DIM,SIZE>* 
   }
 }
 
-template <unsigned int SIZE, unsigned int DIM, typename LS>
-void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::operator()()
+
+template <unsigned int SIZE, unsigned int DIM>
+void GPU_CartesianLevelSetBC<SIZE,DIM>::operator()()
 {
   cudaDeviceSetCacheConfig(cudaFuncCachePreferL1);
   CUDA_CHECK_ERROR;
@@ -366,12 +381,12 @@ void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::operator()()
     int num_threads = num_cells/num_blocks + 1;
     if (num_cells > num_blocks*num_threads) BUG;
 
-    GPU_CartesianLevelSetComputeBC_kernel<SIZE,DIM,LS> <<<num_blocks, num_threads>>>(m_BcCells.dst_cells, m_BcCells.dst_cells_size);
+    GPU_CartesianLevelSetComputeBC_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(m_BcCells.dst_cells, m_BcCells.dst_cells_size);
     cudaDeviceSynchronize();
     CUDA_CHECK_ERROR;
 
     for(int i_grp = 0; i_grp < m_BcCells.num_groups; ++i_grp) {
-      GPU_CartesianLevelSetWriteBCCells_kernel<SIZE,DIM,LS> <<<num_blocks, num_threads>>>(m_BcCells.dst_cells, m_BcCells.group_start[i_grp], m_BcCells.group_size[i_grp]);
+      GPU_CartesianLevelSetWriteBCCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(m_BcCells.dst_cells, m_BcCells.group_start[i_grp], m_BcCells.group_size[i_grp]);
 
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR;
@@ -388,26 +403,16 @@ void GPU_CartesianLevelSetBC<SIZE,DIM,LS>::operator()()
       int num_threads = num_cells/num_blocks + 1;
       if (num_cells > num_blocks*num_threads) BUG;
 
-      GPU_CartesianLevelSetComputeInsideCells_kernel<SIZE,DIM,LS> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
+      GPU_CartesianLevelSetComputeInsideCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR;
 
-      GPU_CartesianLevelSetWriteInsideCells_kernel<SIZE,DIM,LS> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
+      GPU_CartesianLevelSetWriteInsideCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(this->m_GpuPatches[i_patch], m_GpuInsideCells[i_patch], num_cells);
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR;
     }
 
   }
-}
-
-CUDA_DH inline real norm(real x, real y, real z)
-{
-  return sqrt(x*x + y*y + z*z);
-}
-
-CUDA_DH inline real dot(real x1, real y1, real z1, real x2, real y2, real z2)
-{
-  return (x1*x2 + y1*y2 + z1*z2);
 }
 
 
