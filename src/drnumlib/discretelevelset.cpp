@@ -269,3 +269,8 @@ void DiscreteLevelSet::levelSetPerCell(size_t i_patch)
   }
 }
 
+real DiscreteLevelSet::G(CartesianPatch* patch, size_t i, size_t j, size_t k)
+{
+  return patch->getExtraCPUVarset(m_ExtraVarIndex)[patch->index(i,j,k)];
+}
+

@@ -90,29 +90,7 @@ public:
   DiscreteLevelSet(PatchGrid *patch_grid, size_t i_extra_var = 0);
 
   void readGeometry(QString geometry_file_name);
-
-};
-
-
-
-class StoredLevelSet
-{
-
-protected: // attributes
-
-  size_t m_IVar;
-
-
-public: // methods
-
-  CUDA_DH StoredLevelSet(size_t i_var) { m_IVar = i_var; }
-  CUDA_DH StoredLevelSet() {}
-
-  template <typename T_Patch>
-  CUDA_DH real G(T_Patch& patch, size_t i, size_t j, size_t k, size_t i_field = 0)
-  {
-    return patch.f(i_field, m_IVar, i, j, k);
-  }
+  real G(CartesianPatch* patch, size_t i, size_t j, size_t k);
 
 };
 
