@@ -1,12 +1,14 @@
 #ifndef LSOBJECT_H
 #define LSOBJECT_H
 
+template <unsigned int SIZE, unsigned int DIM>
 class LSObject;
 
 #include "patchgrid.h"
 #include "lsbc_list_t.h"
 #include "weightedset.h"
 
+template <unsigned int SIZE, unsigned int DIM>
 class LSObject
 {
   PatchGrid* m_PatchGrid;
@@ -17,20 +19,14 @@ class LSObject
   size_t m_TransFieldIndex; ///< index of variable field for which to access/extrapolte data for BC construction
 
   /** Interpolation list */
-  lsbc_list_t<8,5> m_LSBCList;   /// @todo make "this" a template class too to pass over number of vars
+  lsbc_list_t<SIZE, DIM> m_LSBCList;   /// @todo make "this" a template class too to pass over number of vars
+
+  bool m_LSBCListOK;        ///< bool indicating, m_LSBCList is available.
 
   /// @todo m_MinInnerGDist may better rely on relative G-values: thresholds definedrelative to cell sizes.
 
-
-  struct layer_cell_entry
-  {
-    size_t i_patch;  // patch index in m_PatchGrid
-    size_t l_cell;   // 1D cell index in patch
-    real   g;        // g-value (equiv. to wall distance, inside negative)
-    int    layer;    // layer index
-  };
-
-
+  /**
+   * Intermediate struct for per-patch layer data */
   struct layer_cell_entry_pp
   {
     size_t i_patch;  // patch index in m_PatchGrid
@@ -54,7 +50,26 @@ public:
            real min_inner_g_dist,
            size_t trans_field_index);
 
+  /**
+   * @brief Build up layer cell access/mirror info for the present lavel set.
+   */
   void extractBCellLayers();
+
+  /**
+   * @brief getLSBCList Access lsbc_list_t produced by this::extractBCellLayers() for external storage
+   * @return lsbc_list_t ...
+   */
+  lsbc_list_t<SIZE, DIM> getLSBCList() ;  /// @todo check: will the std-copy constructoro do the newing job??
+
+
+  /**
+   * @brief getLSBCListPtr Access pointer to lsbc_list_t produced by this::extractBCellLayers()
+   * and stored permanently.
+   * @return pointer to lsbc_list_t ...
+   */
+  lsbc_list_t<SIZE, DIM>* getLSBCListPtr();
 };
+
+
 
 #endif // LSOBJECT_H
