@@ -114,7 +114,7 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
   // Count cells with 1,2,3,... contributions
   //   example: count_contribs[1] will later be the number of dst-cells with 2 contributors
   //            count_contribs[i_cc] will later be the number of dst-cells with i_cc+1 contributors
-  vector<int> count_contribs;
+  vector<size_t> count_contribs;
 
   // 1) Loop over patches and cells
   // Loop for all patches. Note 10: direct indexing on patches!
@@ -183,7 +183,6 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
       //      }
 
       // layer_cells_pp[layer][cell]: layer cells per patch
-      //   first: cell index in patch, second: g-value
       vector<vector<layer_cell_entry_pp> > layer_cells_pp;
       layer_cells_pp.resize(m_NumLayers);
 
@@ -274,7 +273,6 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
           //.... Nabla G. Note 60: Coordinate system is own system
           patch->computeNablaArray(g_array, lc.dst_index,
                                    lc.gx, lc.gy, lc.gz);
-          layer_cells.push_back(lc);
           //.. Construct mirror point (on oposite side)
           vec3_t nablaxyz_g(lc.gx, lc.gy, lc.gz);
           real shift_len = -2. * lce_pp.g;
@@ -343,7 +341,7 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
   }
   //   all others
   size_t i_group = 0;
-  for (size_t i_lc = 0; i_lc < layer_cells.size(); i_lc++) {
+  for (size_t i_lc = 1; i_lc < layer_cells.size(); i_lc++) {
     //.... Check for recursion. On recursion: shift up to next vector group
     // if (layer_cells[i_lc].dst_data + layer_cells[i_lc].dst_index ==
     //     layer_cells[i_lc-1].dst_data + layer_cells[i_lc-1].dst_index) {
@@ -370,13 +368,13 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
     }
   }
 
-  // 3b) Check vectorization (uniquenes) and if group 0 contains all dst-cells
+  // 3b) Check vectorization (uniqueness) and if group 0 contains all dst-cells
   vector<real*> addresses;
   bool no_error = true;
   for (size_t i_g = 0; i_g < m_LSBCList.num_groups; i_g++) {  // loop groups
     addresses.clear();
-    // insert all left side mem addresses (maps 1:1 to device)
-    for (size_t i_c = m_LSBCList.group_start[0]; i_c < m_LSBCList.group_size[0]; i_c++) {
+    // insert all left side mem addresses og group i_g (maps 1:1 to device)
+    for (size_t i_c = m_LSBCList.group_start[i_g]; i_c < m_LSBCList.group_size[i_g]; i_c++) {
       lsbc_cell_t<SIZE,DIM> contrib = m_LSBCList.dst_cells[i_c];
       real* address = contrib.dst_data + size_t(contrib.dst_index);  // ptr-shift
       addresses.push_back(address);
@@ -390,27 +388,30 @@ void LSObject<SIZE, DIM>::extractBCellLayers()
     size_t unique_size = addresses.size();
     if(raw_size != unique_size) {
       cout << "Error, vector group " << i_g << " with multiple left side addresses." << endl;
-      no_error = true;
+      no_error = false;
     }
     // Continue checking, if first group 0 contains all entries
-    if (i_g == 0) {
-      size_t unique_size_0 = unique_size;
-      // append all entries of all subsequent groups
-      for (size_t i_c = m_LSBCList.group_start[0]+1; i_c < m_LSBCList.dst_cells_size; i_c++) {
-        lsbc_cell_t<SIZE,DIM> contrib = m_LSBCList.dst_cells[i_c];
-        real* address = contrib.dst_data + size_t(contrib.dst_index);  // ptr-shift
-        addresses.push_back(address);
-      }
-      // sort and make unique, then check size again: If size is bigger than unique_size_0, there
-      // were left side addresses in groups of higher index, that did not exist in the first group 0
-      // This is a concat initializer error
-      sort(addresses.begin(), addresses.end());
-      it = unique(addresses.begin(), addresses.end());
-      addresses.resize(it - addresses.begin());
-      unique_size = addresses.size();
-      if (unique_size > unique_size_0) {
-        cout << "Concat-init-error: vector group 0 did not contain all left side addresses" << endl;
-        no_error = true;
+    if (i_g == 0) {  // only for first group
+      if (m_LSBCList.num_groups > 1) {  // only meaningful if more than a single group exists
+        size_t unique_size_0 = unique_size;
+        // append all entries of all subsequent groups
+        for (size_t i_c = m_LSBCList.group_start[0]+m_LSBCList.group_size[0]; i_c < m_LSBCList.dst_cells_size; i_c++) {
+        //for (size_t i_c = m_LSBCList.group_start[1]; i_c < m_LSBCList.dst_cells_size; i_c++) {
+          lsbc_cell_t<SIZE,DIM> contrib = m_LSBCList.dst_cells[i_c];
+          real* address = contrib.dst_data + size_t(contrib.dst_index);  // ptr-shift
+          addresses.push_back(address);
+        }
+        // sort and make unique, then check size again: If size is bigger than unique_size_0, there
+        // were left side addresses in groups of higher index, that did not exist in the first group 0
+        // This is a concat initializer error
+        sort(addresses.begin(), addresses.end());
+        it = unique(addresses.begin(), addresses.end());
+        addresses.resize(it - addresses.begin());
+        unique_size = addresses.size();
+        if (unique_size > unique_size_0) {
+          cout << "Concat-init-error: vector group 0 did not contain all left side addresses" << endl;
+          no_error = false;
+        }
       }
     }
   }

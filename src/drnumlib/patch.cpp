@@ -828,8 +828,10 @@ bool Patch::interpolCoeffs4XYZRestrict(const real& x, const real& y, const real&
   }
 
   // Downgrade weights in case of multiple contributing patches
-  for (size_t i_c = 0; i_c < all_ws.size(); i_c++) {
-    all_ws[i_c].second *= (1./all_ws.size());
+  if (all_ws.size() > 1) {
+    for (size_t i_c = 0; i_c < all_ws.size(); i_c++) {
+      all_ws[i_c].second *= (1./all_ws.size());
+    }
   }
 
   return (all_ws.size()!=0);

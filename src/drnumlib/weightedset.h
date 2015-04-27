@@ -670,7 +670,7 @@ inline bool WeightedSet<T>::tranferToFixedArrays(size_t n_dimension,
     }
     //.. apply padding
     for(size_t i=v.size(); i<n_dimension; i++) {
-      indices[i] = v[v.size()].first;
+      indices[i] = v[v.size()-1].first;
       weights[i] = t_zero;
     }
   }
@@ -724,7 +724,7 @@ inline bool WeightedSet<T>::tranferToFixedArrays(size_t n_dimension,
     }
     //.. apply padding
     for(size_t i=v.size(); i<n_dimension; i++) {
-      indices[i] = v[v.size()].first;  // auto-cast
+      indices[i] = v[v.size()-1].first;  // auto-cast
       weights[i] = t_zero;
     }
   }
