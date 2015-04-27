@@ -70,6 +70,6 @@ public:
   lsbc_list_t<SIZE, DIM>* getLSBCListPtr();
 };
 
-
+#include "lsobject.cpp"
 
 #endif // LSOBJECT_H

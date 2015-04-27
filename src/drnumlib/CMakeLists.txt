@@ -43,6 +43,9 @@ SET(drnumlib_SOURCES
     levelsetdefinition.cpp
     levelsetobject.cpp
     levelsetobjectbc.cpp
+    lsbc_cell_t.h
+    lsbc_list_t.h
+    lsobject.h
     mpicommunicator.cpp
     objectdefinition.cpp
     patch.cpp

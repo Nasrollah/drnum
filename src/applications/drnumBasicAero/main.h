@@ -65,6 +65,8 @@
 
 #include "configmap.h"
 
+#include "lsobject.h"
+
 #define NUM_VARS 6
 
 template <typename TReconstruction>
@@ -464,6 +466,14 @@ void run()
     ls_wall.readGeometry(file_name);
     cout << endl << "Discrete Level Set Runtime -> " << t_levelSet.elapsed()/1000. << endl;
     patch_grid.writeToVtk(0, "VTK-drnum/levelset", LevelSetPlotVars(0), -1);
+
+    LSObject<8,NUM_VARS> lsobject(&patch_grid,
+                                  0,    // var index in m_ExtraCPUData
+                                  2,    // num_layers
+                                  0.,   // min_inner_g_dist
+                                  0);   // trans_field_index
+    lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
+
     typedef CompressibleLsSlip<GPU_CartesianPatch, PerfectGas> bc_t;
     typedef StoredLevelSet ls_t;
     bc_t bc;
