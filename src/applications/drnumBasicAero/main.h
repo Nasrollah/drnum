@@ -52,7 +52,7 @@
 
 #ifdef GPU
 #include "iterators/gpu_cartesianiterator.h"
-//#include "gpu_cartesianlevelsetbc.h"
+#include "gpu_cartesianlevelsetbc.h"
 #else
 #include "iterators/cartesianiterator.h"
 #endif
@@ -472,9 +472,9 @@ void run()
                                   2,    // num_layers
                                   0.,   // min_inner_g_dist
                                   0);   // trans_field_index
-    //lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
+    lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
 
-    //runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<8, NUM_VARS>(&patch_grid, ls_wall, lsptr_test, cuda_device, thread_limit));
+    runge_kutta.addPostOperation(new GPU_CartesianLevelSetBC<8, NUM_VARS>(&patch_grid, ls_wall, lsptr_test, cuda_device, thread_limit));
 
   }
 #endif
