@@ -469,8 +469,8 @@ void run()
 
     LSObject<8,NUM_VARS> lsobject(&patch_grid,
                                   0,    // var index in m_ExtraCPUData
-                                  2,    // num_layers
-                                  0.,   // min_inner_g_dist
+                                  3,    // num_layers
+                                  0.0005,   // min_inner_g_dist
                                   0);   // trans_field_index
     lsbc_list_t<8, NUM_VARS>* lsptr_test = lsobject.getLSBCListPtr();
 
