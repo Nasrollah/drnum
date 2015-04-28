@@ -359,12 +359,48 @@ __global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t<SIZE,DIM>* cel
   }
   lsbc_cell_t<SIZE,DIM>& cell_i = cells[idx];
 
+  for(size_t i_var = 0; i_var < DIM; ++i_var) {
+    cell_i.tmp_data[i_var] = cell_i.src_weight[0] * cell_i.src_data[i_var*cell_i.src_step + cell_i.src_index[0]];
+    for(size_t cell_n = 1; cell_n < SIZE; ++cell_n) {
+      cell_i.tmp_data[i_var] += cell_i.src_weight[cell_n] * cell_i.src_data[i_var*cell_i.src_step + cell_i.src_index[cell_n]];
+    }
+  }
+}
+
+template <unsigned int SIZE, unsigned int DIM>
+__global__ void GPU_CartesianLevelSetWriteBCCells_kernel(lsbc_cell_t<SIZE,DIM>* cells, int grp_nb, int grp_start, int grp_size)
+{
+  int idx = blockDim.x*blockIdx.x + threadIdx.x;
+
+  if (idx >= grp_size) {
+    return;
+  }
+
+  lsbc_cell_t<SIZE,DIM>& cell_i = cells[idx + grp_start];
+
+  for (size_t i_var = 0; i_var < DIM; ++i_var) {
+    if (grp_nb == 0) {
+      cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] = cell_i.tmp_data[i_var];
+    }
+    else {
+      cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] += cell_i.tmp_data[i_var];
+    }
+  }
+}
+
+template <unsigned int SIZE, unsigned int DIM>
+__global__ void GPU_CartesianLevelSetMirrorBCCells_kernel(lsbc_cell_t<SIZE,DIM>* cells, int grp_size)
+{
+  int idx = blockDim.x*blockIdx.x + threadIdx.x;
+
+  if (idx >= grp_size) {
+    return;
+  }
+  lsbc_cell_t<SIZE,DIM>& cell_i = cells[idx];
+
   real var[DIM];
   for(size_t i_var = 0; i_var < DIM; ++i_var) {
-    var[i_var] = 0;
-    for(size_t cell_n = 0; cell_n < SIZE; ++cell_n) {
-      var[i_var] += cell_i.src_weight[cell_n] * cell_i.src_data[i_var*cell_i.src_step + cell_i.src_index[cell_n]];
-    }
+    var[i_var] = cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index];
   }
 
   real p, T, u, v, w;
@@ -379,32 +415,15 @@ __global__ void GPU_CartesianLevelSetComputeBC_kernel(lsbc_cell_t<SIZE,DIM>* cel
   n[2] /= norm_g;
 
   real dot_n = dot(u, v, w, n[0], n[1], n[2]);
-  u -= 2*n[0]*dot_n;
-  v -= 2*n[1]*dot_n;
-  w -= 2*n[2]*dot_n;
-
-  // 1. Store
-  // 2. Instantiate dst_data
+  //u -= 2*n[0]*dot_n;
+  //v -= 2*n[1]*dot_n;
+  //w -= 2*n[2]*dot_n;
+  u -= 1.8*n[0]*dot_n;
+  v -= 1.8*n[1]*dot_n;
+  w -= 1.8*n[2]*dot_n;
   PerfectGas::primitiveToConservative(p, T, u, v, w, var);
   for (size_t i_var = 0; i_var < DIM; ++i_var) {
-    cell_i.tmp_data[i_var] = var[i_var];
-    cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] = 0;
-  }
-}
-
-template <unsigned int SIZE, unsigned int DIM>
-__global__ void GPU_CartesianLevelSetWriteBCCells_kernel(lsbc_cell_t<SIZE,DIM>* cells, int grp_start, int grp_size)
-{
-  int idx = blockDim.x*blockIdx.x + threadIdx.x;
-
-  if (idx >= grp_size) {
-    return;
-  }
-
-  lsbc_cell_t<SIZE,DIM>& cell_i = cells[idx + grp_start];
-
-  for (size_t i_var = 0; i_var < DIM; ++i_var) {
-    cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] += cell_i.tmp_data[i_var];
+    cell_i.dst_data[i_var*cell_i.dst_step + cell_i.dst_index] = var[i_var];
   }
 }
 
@@ -432,10 +451,15 @@ void GPU_CartesianLevelSetBC<SIZE,DIM>::operator()()
     CUDA_CHECK_ERROR;
 
     for(int i_grp = 0; i_grp < m_BcCells.num_groups; ++i_grp) {
-      GPU_CartesianLevelSetWriteBCCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(m_GpuBcCells, m_BcCells.group_start[i_grp], m_BcCells.group_size[i_grp]);
+      GPU_CartesianLevelSetWriteBCCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(m_GpuBcCells, i_grp, m_BcCells.group_start[i_grp], m_BcCells.group_size[i_grp]);
       cudaDeviceSynchronize();
       CUDA_CHECK_ERROR;
     }
+
+    GPU_CartesianLevelSetMirrorBCCells_kernel<SIZE,DIM> <<<num_blocks, num_threads>>>(m_GpuBcCells, m_BcCells.group_size[0]);
+    cudaDeviceSynchronize();
+    CUDA_CHECK_ERROR;
+
   }
 
   for (size_t i_patch = 0; i_patch < this->m_Patches.size(); ++i_patch) {
